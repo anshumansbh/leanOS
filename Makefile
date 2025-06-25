@@ -1,47 +1,45 @@
-# Top-level Makefile for myos
+ASM = nasm
+CC = i686-elf-gcc
+LD = i686-elf-ld
+OBJCOPY = i686-elf-objcopy
 
-BOOT = boot/boot.asm
-KERNEL = kernel/kernel.c
-VGA = kernel/vga.c
-LINKER = kernel/linker.ld
+CFLAGS = -ffreestanding -m32 -nostdlib -O2 -Wall -Wextra
+LDFLAGS = -T kernel/linker.ld
+
 BUILD = build
 BOOT_BIN = $(BUILD)/boot.bin
+ENTRY_OBJ = $(BUILD)/entry.o
+KERNEL_OBJ = $(BUILD)/kernel.o
+KERNEL_ELF = $(BUILD)/kernel.elf
 KERNEL_BIN = $(BUILD)/kernel.bin
 OS_IMG = $(BUILD)/os.img
-
-AS = nasm
-CC = /opt/cross/bin/i686-elf-gcc
-LD = /opt/cross/bin/i686-elf-ld
-
-CFLAGS = -ffreestanding -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -Wall -Wextra
-LDFLAGS = -T $(LINKER) -nostdlib
-
-KERNEL_OBJS = $(BUILD)/kernel.o $(BUILD)/vga.o
 
 all: $(OS_IMG)
 
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(BOOT_BIN): $(BOOT) | $(BUILD)
-	$(AS) -f bin $< -o $@
+$(BOOT_BIN): boot/boot.asm | $(BUILD)
+	$(ASM) -f bin $< -o $@
 
-$(BUILD)/kernel.o: $(KERNEL) kernel/vga.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $(KERNEL) -o $@
+$(ENTRY_OBJ): kernel/entry.asm | $(BUILD)
+	$(ASM) -f elf32 $< -o $@
 
-$(BUILD)/vga.o: $(VGA) kernel/vga.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $(VGA) -o $@
+$(KERNEL_OBJ): kernel/kernel.c | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL_BIN): $(KERNEL_OBJS) $(LINKER) | $(BUILD)
-	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJS)
+$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(KERNEL_BIN): $(KERNEL_ELF)
+	$(OBJCOPY) -O binary $< $@
 
 $(OS_IMG): $(BOOT_BIN) $(KERNEL_BIN)
-	dd if=/dev/zero of=$@ bs=512 count=2880
-	dd if=$(BOOT_BIN) of=$@ conv=notrunc
-	dd if=$(KERNEL_BIN) of=$@ bs=512 seek=1 conv=notrunc
+	cat $^ > $@
+	truncate -s 4608 $@
 
 run: $(OS_IMG)
-	qemu-system-i386 -fda $(OS_IMG)
+	qemu-system-i386 -drive format=raw,file=$(OS_IMG),if=floppy
 
 clean:
 	rm -rf $(BUILD)
