@@ -10,6 +10,8 @@ BUILD = build
 BOOT_BIN = $(BUILD)/boot.bin
 ENTRY_OBJ = $(BUILD)/entry.o
 KERNEL_OBJ = $(BUILD)/kernel.o
+VGA_OBJ = $(BUILD)/vga.o
+KEYBOARD_OBJ = $(BUILD)/keyboard.o
 KERNEL_ELF = $(BUILD)/kernel.elf
 KERNEL_BIN = $(BUILD)/kernel.bin
 OS_IMG = $(BUILD)/os.img
@@ -28,7 +30,13 @@ $(ENTRY_OBJ): kernel/entry.asm | $(BUILD)
 $(KERNEL_OBJ): kernel/kernel.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ)
+$(VGA_OBJ): kernel/vga.c kernel/vga.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(KEYBOARD_OBJ): kernel/keyboard.c kernel/keyboard.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ) $(VGA_OBJ) $(KEYBOARD_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 $(KERNEL_BIN): $(KERNEL_ELF)
