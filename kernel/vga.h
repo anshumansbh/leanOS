@@ -22,4 +22,10 @@ void log_hex(unsigned int value);
 // Clear the VGA text screen
 void clear_screen(void);
 
+// Flash the VGA screen for error indication
+void vga_flash_screen(void);
+
+// Log a fatal VGA error and flash the screen
+void vga_panic(const char* msg);
+
 #endif // VGA_H 

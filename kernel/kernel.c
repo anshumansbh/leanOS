@@ -3,6 +3,7 @@
 
 #include "vga.h"
 #include "keyboard.h"
+#include "idt.h"
 
 static char scancode_to_ascii[128] = {
     0, 27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
@@ -20,13 +21,12 @@ static unsigned char inb(unsigned short port) {
 
 void kernel_main(void) __attribute__((noreturn));
 void kernel_main(void) {
+    idt_init();
     clear_screen();
     log_color("Kernel loaded!\n", LOG_COLOR_INFO);
     log_color("Type keys. Backspace supported. Press ESC to halt.\n", LOG_COLOR_DEBUG);
     keyboard_init();
 
-    char line[80];
-    int len = 0;
     while (1) {
         keyboard_poll();
         char c = keyboard_getchar();
@@ -35,19 +35,14 @@ void kernel_main(void) {
                 log_color("\n[INFO] Halting.\n", LOG_COLOR_INFO);
                 break;
             } else if (c == '\b') {
-                if (len > 0) {
-                    len--;
-                    line[len] = 0;
-                    log_color("\b \b", LOG_COLOR_INFO); // Erase char visually
-                }
+                log_color("\b \b", LOG_COLOR_INFO); // Erase char visually
             } else if (c == '\n') {
-                line[len] = 0;
                 log_color("\n", LOG_COLOR_INFO);
-                len = 0;
-            } else if (len < 79) {
+                // Optionally: process the line here
+                keyboard_clear_buffer();
+            } else {
                 char msg[2] = {c, 0};
                 log_color(msg, LOG_COLOR_WARN);
-                line[len++] = c;
             }
         }
     }

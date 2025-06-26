@@ -35,6 +35,7 @@ static void scroll() {
         VGA_MEMORY[idx + 1] = LOG_COLOR_INFO;
     }
     if (cursor_row > 0) cursor_row--;
+    if (cursor_row < 0) vga_panic("Scroll: cursor_row < 0");
 }
 
 // Clear the VGA text screen
@@ -59,6 +60,13 @@ static void putchar(char c, unsigned char color) {
         cursor_row++;
     } else if (c == '\r') {
         cursor_col = 0;
+    } else if (c == '\b') {
+        if (cursor_col > 0) {
+            cursor_col--;
+            int idx = (cursor_row * VGA_WIDTH + cursor_col) * 2;
+            VGA_MEMORY[idx] = ' ';
+            VGA_MEMORY[idx + 1] = color;
+        }
     } else {
         int idx = (cursor_row * VGA_WIDTH + cursor_col) * 2;
         VGA_MEMORY[idx] = c;
@@ -71,6 +79,12 @@ static void putchar(char c, unsigned char color) {
     }
     if (cursor_row >= VGA_HEIGHT) {
         scroll();
+    }
+    if (cursor_row < 0 || cursor_row >= VGA_HEIGHT) {
+        vga_panic("Cursor row out of bounds");
+    }
+    if (cursor_col < 0 || cursor_col >= VGA_WIDTH) {
+        vga_panic("Cursor col out of bounds");
     }
     update_cursor();
 }
@@ -95,6 +109,38 @@ void log_hex(unsigned int value) {
         char c = hex_chars[(value >> i) & 0xF];
         putchar(c, LOG_COLOR_DEBUG);
     }
+}
+
+void vga_flash_screen(void) {
+    // Save current VGA buffer
+    char saved[VGA_WIDTH * VGA_HEIGHT * 2];
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT * 2; ++i) {
+        saved[i] = VGA_MEMORY[i];
+    }
+    // Flash red
+    for (int f = 0; f < 2; ++f) {
+        unsigned char color = 0x4C; // Red on black
+        for (int row = 0; row < VGA_HEIGHT; ++row) {
+            for (int col = 0; col < VGA_WIDTH; ++col) {
+                int idx = (row * VGA_WIDTH + col) * 2;
+                VGA_MEMORY[idx] = ' ';
+                VGA_MEMORY[idx + 1] = color;
+            }
+        }
+        for (volatile int d = 0; d < 2000000; ++d) { __asm__("nop"); }
+    }
+    // Restore previous screen
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT * 2; ++i) {
+        VGA_MEMORY[i] = saved[i];
+    }
+}
+
+
+void vga_panic(const char* msg) {
+    log_color("\n[VGA ERROR] ", LOG_COLOR_ERROR);
+    log_color(msg, LOG_COLOR_ERROR);
+    log_color("\System halting.\n", LOG_COLOR_ERROR);
+    vga_flash_screen();
 }
 
 volatile char* vga = (volatile char*)0xB8000;
