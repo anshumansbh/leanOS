@@ -17,6 +17,7 @@ IDT_C_OBJ = $(BUILD)/idt_c.o
 KERNEL_ELF = $(BUILD)/kernel.elf
 KERNEL_BIN = $(BUILD)/kernel.bin
 OS_IMG = $(BUILD)/os.img
+SHELL_OBJ = $(BUILD)/shell.o
 
 all: $(OS_IMG)
 
@@ -32,19 +33,22 @@ $(ENTRY_OBJ): kernel/entry.asm | $(BUILD)
 $(KERNEL_OBJ): kernel/kernel.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(VGA_OBJ): kernel/vga.c kernel/vga.h | $(BUILD)
+$(VGA_OBJ): src/drivers/vga.c src/drivers/vga.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KEYBOARD_OBJ): kernel/keyboard.c kernel/keyboard.h | $(BUILD)
+$(KEYBOARD_OBJ): src/drivers/keyboard.c src/drivers/keyboard.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(IDT_OBJ): kernel/idt.asm | $(BUILD)
+$(IDT_OBJ): src/interrupts/idt.asm | $(BUILD)
 	$(ASM) -f elf32 $< -o $@
 
-$(IDT_C_OBJ): kernel/idt.c kernel/idt.h | $(BUILD)
+$(IDT_C_OBJ): src/interrupts/idt.c src/interrupts/idt.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ) $(VGA_OBJ) $(KEYBOARD_OBJ) $(IDT_OBJ) $(IDT_C_OBJ)
+$(SHELL_OBJ): src/shell/shell.c src/shell/shell.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ) $(VGA_OBJ) $(KEYBOARD_OBJ) $(IDT_OBJ) $(IDT_C_OBJ) $(SHELL_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 $(KERNEL_BIN): $(KERNEL_ELF)

@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "idt.h"
-#include "vga.h"
+#include "../drivers/vga.h"
 
 struct idt_entry {
     uint16_t offset_low;

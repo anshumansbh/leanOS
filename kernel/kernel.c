@@ -1,9 +1,10 @@
 // kernel/kernel.c - Minimal 32-bit kernel for myos
 // Uses VGA logger for colored output
 
-#include "vga.h"
-#include "keyboard.h"
-#include "idt.h"
+#include "../src/drivers/vga.h"
+#include "../src/drivers/keyboard.h"
+#include "../src/interrupts/idt.h"
+#include "../src/shell/shell.h"
 
 static char scancode_to_ascii[128] = {
     0, 27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
@@ -26,6 +27,7 @@ void kernel_main(void) {
     log_color("Kernel loaded!\n", LOG_COLOR_INFO);
     log_color("Type keys. Backspace supported. Press ESC to halt.\n", LOG_COLOR_DEBUG);
     keyboard_init();
+    shell_main();
 
     while (1) {
         keyboard_poll();
